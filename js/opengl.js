@@ -1,4 +1,4 @@
-import { load_file_contents } from './utils.js'
+import { load_file_contents } from './utils.js';
 
 export class Texture {
 	constructor(gl, url) {
@@ -90,11 +90,11 @@ export class ShaderProgram {
 			gl.attachShader(this.prog, frag);
 			gl.linkProgram(this.prog);
 
-			gl.detachShader(this.prog, vtx);
-			gl.deleteShader(vtx);
+		//	gl.detachShader(this.prog, vtx);
+		//	gl.deleteShader(vtx);
 
-			gl.detachShader(this.prog, frag);
-			gl.deleteShader(frag);
+		//	gl.detachShader(this.prog, frag);
+		//	gl.deleteShader(frag);
 
 			if (!gl.getProgramParameter(this.prog, gl.LINK_STATUS)) {
 				console.error(gl.getProgramInfoLog(this.prog));
@@ -129,16 +129,92 @@ export class Buffer {
 		this.buffer = gl.createBuffer();
 	}
 
-	store(data, usage = this.gl.STATIC_DRAW) {
+	store(data, usage) {
 		this.bind();
 		this.gl.bufferData(this.type, data, usage);
 	}
 }
 
-export class Vertex {
-	
-}
-
 export class Mesh {
+	constructor(gl) {
+		this.gl = gl;
+		this.xyz_bo = gl.createBuffer();
+		this.uvw_bo = gl.createBuffer();
+		this.rgba_bo = gl.createBuffer();
+		this.n_vertices = 0;
+	}
 
+	set_vertices(vtx, usage = this.gl.STATIC_DRAW) {
+		let out_xyz = [];
+		let out_uvw = [];
+		let out_rgba = [];
+
+		for (let v in vtx) {
+			out_xyz.push(v[0]);
+			out_xyz.push(v[1]);
+			out_xyz.push(v[2]);
+
+			out_uvw.push(v[3]);
+			out_uvw.push(v[4]);
+			out_uvw.push(v[5]);
+
+			out_rgba.push(v[6]);
+			out_rgba.push(v[7]);
+			out_rgba.push(v[8]);
+			out_rgba.push(v[9]);
+		}
+
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.xyz_bo);
+		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(out_xyz), usage);
+
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.uvw_bo);
+		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(out_uvw), usage);
+
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.rgba_bo);
+		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(out_rgba), usage);
+
+		this.n_vertices = vtx.length;
+	}
+
+	draw(prog) {
+		const vtx_pos_loc = this.gl.getAttribLocation(prog.prog, "vtx_pos");
+		const tex_coords_loc = this.gl.getAttribLocation(prog.prog, "tex_coords");
+		const rgba_loc = this.gl.getAttribLocation(prog.prog, "rgba");
+
+		console.assert(vtx_pos_loc !== -1, "fuck 1");
+		console.assert(tex_coords_loc !== -1, "fuck 2");
+		console.assert(rgba_loc !== -1, "fuck 3");
+
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.xyz_bo);
+		this.gl.vertexAttribPointer(
+			vtx_pos_loc,
+			3,
+			this.gl.FLOAT,
+			false,
+			12,
+			0);
+		this.gl.enableVertexAttribArray(vtx_pos_loc);
+
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.uvw_bo);
+		this.gl.vertexAttribPointer(
+			tex_coords_loc,
+			3,
+			this.gl.FLOAT,
+			false,
+			12,
+			0);
+		this.gl.enableVertexAttribArray(tex_coords_loc);
+
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.rgba_bo);
+		this.gl.vertexAttribPointer(
+			rgba_loc,
+			4,
+			this.gl.FLOAT,
+			false,
+			12,
+			0);
+		this.gl.enableVertexAttribArray(rgba_loc);
+
+		this.gl.drawArrays(this.gl.TRIANGLES, 0, this.n_vertices);
+	}
 }
