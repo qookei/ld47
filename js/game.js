@@ -1,55 +1,40 @@
-import { gl, Texture, ShaderProgram, VertexObject } from './opengl.js';
-import { mat4 } from '../thirdparty/gl-matrix/index.js';
+import { prepare_frame, Sprite } from './opengl.js';
+import { is_key_down } from './input.js';
 
 export class Game {
-	floshed = null;
-	shader_program = null;
-	test_mesh = null;
+	floshed1 = null;
+	floshed2 = null;
 
 	async init() {
-		this.floshed = new Texture("../res/floshed.png");
-		this.shader_program = new ShaderProgram();
-		await this.shader_program.load("../res/vertex.glsl", "../res/fragment.glsl");
-		this.test_mesh = new VertexObject();
-		this.test_mesh.load([
-			[ [100, 100], [1, 1], [1, 1, 1, 1] ],
-			[ [  0, 100], [0, 1], [1, 1, 1, 1] ],
-			[ [100,   0], [1, 0], [1, 1, 1, 1] ],
-
-			[ [100,   0], [1, 0], [1, 1, 1, 1] ],
-			[ [  0,   0], [0, 0], [1, 1, 1, 1] ],
-			[ [  0, 100], [0, 1], [1, 1, 1, 1] ],
-		])
+		this.floshed1 = await Sprite.new("../res/floshed.png");
+		this.floshed2 = await Sprite.new("../res/floshed.png", 0.5, 0.5);
 	}
 
-	then = 0;
-	run(now = 0) {
-		now *= 0.001;
-		const dt = now - this.then;
-		this.then = now;
+	t = 0;
+	x = 200; y = 200; orbit = 200;
+	update(dt) {
+		if (is_key_down('right')) this.x += dt * 100;
+		if (is_key_down('left')) this.x -= dt * 100;
+		if (is_key_down('down')) this.y += dt * 100;
+		if (is_key_down('up')) this.y -= dt * 100;
+		if (is_key_down('a')) this.orbit -= dt * 100;
+		if (is_key_down('d')) this.orbit += dt * 100;
 
-		this.draw(dt);
+		if (this.orbit < 0) this.orbit = 0;
 
-		window.requestAnimationFrame(now => { this.run(now) });
+		this.floshed1.set_position([
+				Math.cos(this.t) * this.orbit + this.x,
+				Math.sin(this.t) * this.orbit + this.y
+			]);
+
+		this.floshed2.set_position([this.x, this.y]);
+
+		this.t += dt;
 	}
 
-	draw(dt) {
-		gl().clearColor(0, 0, 0, 1);
-		gl().clear(gl().COLOR_BUFFER_BIT);
-
-		const projection = mat4.create();
-		mat4.ortho(projection, 0, 1280, 0, 720, 0.01, 100);
-
-		const model = mat4.create();
-		mat4.translate(model, model,
-				[-0.0, 0.0, -2.0]);
-
-		this.shader_program.use();
-		this.floshed.bind();
-
-		this.shader_program.set_uniform_mat4('projection', projection);
-		this.shader_program.set_uniform_mat4('model', model);
-
-		this.test_mesh.draw(this.shader_program);
+	draw() {
+		prepare_frame();
+		this.floshed1.draw();
+		this.floshed2.draw();
 	}
 }

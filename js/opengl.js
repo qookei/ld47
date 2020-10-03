@@ -1,4 +1,5 @@
 import { load_file_contents } from './utils.js';
+import { mat4 } from '../thirdparty/gl-matrix/index.js';
 
 let gl_global_ = null;
 
@@ -11,51 +12,43 @@ export function set_gl(gl_) {
 }
 
 export class Texture {
-	constructor(url) {
-		this.ready = false;
+	tex = null;
 
-		this.tex = null;
+	async load(url) {
+		return new Promise(realise => {
+			const image = new Image();
+			image.onload = () => {
+				this.tex = gl().createTexture();
+				gl().bindTexture(gl().TEXTURE_2D, this.tex);
+				gl().texImage2D(gl().TEXTURE_2D, 0, gl().RGBA,
+						gl().RGBA, gl().UNSIGNED_BYTE, image);
 
-		const image = new Image();
-		image.onload = () => {
-			this.tex = gl().createTexture();
-			gl().bindTexture(gl().TEXTURE_2D, this.tex);
-			gl().texImage2D(gl().TEXTURE_2D, 0, gl().RGBA,
-					gl().RGBA, gl().UNSIGNED_BYTE, image);
+				gl().texParameteri(gl().TEXTURE_2D, gl().TEXTURE_WRAP_S,
+						gl().CLAMP_TO_EDGE);
+				gl().texParameteri(gl().TEXTURE_2D, gl().TEXTURE_WRAP_T,
+						gl().CLAMP_TO_EDGE);
+				gl().texParameteri(gl().TEXTURE_2D, gl().TEXTURE_MIN_FILTER,
+						gl().NEAREST);
 
-			gl().texParameteri(gl().TEXTURE_2D, gl().TEXTURE_WRAP_S,
-					gl().CLAMP_TO_EDGE);
-			gl().texParameteri(gl().TEXTURE_2D, gl().TEXTURE_WRAP_T,
-					gl().CLAMP_TO_EDGE);
-			gl().texParameteri(gl().TEXTURE_2D, gl().TEXTURE_MIN_FILTER,
-					gl().NEAREST);
+				this.width_ = image.width;
+				this.height_ = image.height;
 
-			this.width_ = image.width;
-			this.height_ = image.height;
-			this.ready = true;
-		};
+				realise();
+			};
 
-		image.src = url;
+			image.src = url;
+		});
 	}
 
-	width() {
-		if (!this.ready)
-			return 0;
+	get width() {
 		return this.width_;
 	}
 
-	height() {
-		if (!this.ready)
-			return 0;
+	get height() {
 		return this.height_;
 	}
 
 	bind(slot = gl().TEXTURE0) {
-		if (!this.ready) {
-			console.log("Texture is not ready yet")
-			return;
-		}
-
 		gl().activeTexture(slot);
 		gl().bindTexture(gl().TEXTURE_2D, this.tex);
 	}
@@ -151,8 +144,6 @@ export class VertexObject {
 			out.push(rgba[3]);
 		}
 
-		console.log(out);
-
 		gl().bindBuffer(gl().ARRAY_BUFFER, this.bo);
 		gl().bufferData(gl().ARRAY_BUFFER, new Float32Array(out), usage);
 
@@ -180,5 +171,79 @@ export class VertexObject {
 			program.rgba_loc);
 
 		gl().drawArrays(gl().TRIANGLES, 0, this.n_vertices);
+	}
+}
+
+const projection_ = mat4.ortho(mat4.create(), 0, 1280, 720, 0, 0.1, 100);
+
+const sprite_program_ = new ShaderProgram();
+
+export async function load_shaders() {
+	await sprite_program_.load("../res/vertex.glsl", "../res/fragment.glsl");
+	sprite_program_.use();
+	sprite_program_.set_uniform_mat4("projection", projection_);
+}
+
+export function sprite_program() {
+	return sprite_program_;
+}
+
+export function prepare_frame(cc = [0, 0, 0, 1]) {
+	gl().clearColor(cc[0], cc[1], cc[2], cc[3])
+	gl().clear(gl().COLOR_BUFFER_BIT);
+
+	gl().enable(gl().BLEND);
+	gl().blendFunc(gl().SRC_ALPHA, gl().ONE_MINUS_SRC_ALPHA);
+}
+
+export class Sprite {
+	constructor(w, h, texture, bo) {
+		this.model_matrix = mat4.create();
+
+		mat4.translate(this.model_matrix, this.model_matrix,
+			[0.0, 0.0, -2.0]); // TODO: why do we need the -2.0???
+
+		this.w = w;
+		this.h = h;
+		this.texture = texture;
+		this.bo = bo;
+	}
+
+	static async new(url, x_scale = 1, y_scale = 1) {
+		const tex = new Texture();
+		await tex.load(url);
+
+		const w = tex.width * x_scale, h = tex.height * y_scale;
+
+		const bo = new VertexObject();
+		bo.load([
+			[ [0, 0], [0, 0], [1, 1, 1, 1] ],
+			[ [w, h], [1, 1], [1, 1, 1, 1] ],
+			[ [0, h], [0, 1], [1, 1, 1, 1] ],
+
+			[ [0, 0], [0, 0], [1, 1, 1, 1] ],
+			[ [w, 0], [1, 0], [1, 1, 1, 1] ],
+			[ [w, h], [1, 1], [1, 1, 1, 1] ],
+		]);
+
+		return new Sprite(w, h, tex, bo);
+	}
+
+	set_position(pos) {
+		mat4.translate(this.model_matrix, mat4.create(),
+			[pos[0] - this.w / 2, pos[1] - this.h / 2, -6.0]);
+	}
+
+	translate(pos) {
+		mat4.translate(this.model_matrix, this.model_matrix,
+			pos.concat([0]));
+
+	}
+
+	draw() {
+		this.texture.bind();
+		sprite_program_.use();
+		sprite_program_.set_uniform_mat4('model', this.model_matrix);
+		this.bo.draw(sprite_program_);
 	}
 }
