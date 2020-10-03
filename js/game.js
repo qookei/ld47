@@ -1,23 +1,24 @@
-import { Texture, ShaderProgram, Mesh } from './opengl.js';
+import { gl, Texture, ShaderProgram, VertexObject } from './opengl.js';
 import { mat4 } from '../thirdparty/gl-matrix/index.js';
 
-let gl = null;
-
 export class Game {
-	constructor(gl_) {
-		gl = gl_;
+	floshed = null;
+	shader_program = null;
+	test_mesh = null;
 
-		this.floshed = new Texture(gl, "../res/floshed.png");
-		this.shader_program = new ShaderProgram(gl, "../res/vertex.glsl", "../res/fragment.glsl");
-		this.test_mesh = new Mesh(gl);
-		this.test_mesh.set_vertices([
-			[-2048, -2048, 0, 1, 1, 0, 1, 1, 1, 1],
-			[ 2048, -2048, 0, 1, 1, 0, 1, 1, 1, 1],
-			[ 2048,  2048, 0, 1, 1, 0, 1, 1, 1, 1],
+	async init() {
+		this.floshed = new Texture("../res/floshed.png");
+		this.shader_program = new ShaderProgram();
+		await this.shader_program.load("../res/vertex.glsl", "../res/fragment.glsl");
+		this.test_mesh = new VertexObject();
+		this.test_mesh.load([
+			[ [100, 100], [1, 1], [1, 1, 1, 1] ],
+			[ [  0, 100], [0, 1], [1, 1, 1, 1] ],
+			[ [100,   0], [1, 0], [1, 1, 1, 1] ],
 
-			[-2048,  2048, 0, 1, 1, 0, 1, 1, 1, 1],
-			[-2048, -2048, 0, 1, 1, 0, 1, 1, 1, 1],
-			[ 2048, -2048, 0, 1, 1, 0, 1, 1, 1, 1],
+			[ [100,   0], [1, 0], [1, 1, 1, 1] ],
+			[ [  0,   0], [0, 0], [1, 1, 1, 1] ],
+			[ [  0, 100], [0, 1], [1, 1, 1, 1] ],
 		])
 	}
 
@@ -33,22 +34,21 @@ export class Game {
 	}
 
 	draw(dt) {
-		gl.clearColor(0, 0, 0, 1);
-		gl.clear(gl.COLOR_BUFFER_BIT);
+		gl().clearColor(0, 0, 0, 1);
+		gl().clear(gl().COLOR_BUFFER_BIT);
 
-		const ortho = mat4.create();
-		mat4.ortho(ortho, 0, 1280, 0, 720, 0.01, 1);
+		const projection = mat4.create();
+		mat4.ortho(projection, 0, 1280, 0, 720, 0.01, 100);
 
-		if (!this.shader_program.ready || !this.floshed.ready)
-			return;
+		const model = mat4.create();
+		mat4.translate(model, model,
+				[-0.0, 0.0, -2.0]);
 
-		gl.useProgram(this.shader_program.prog);
-		//this.floshed.bind();
+		this.shader_program.use();
+		this.floshed.bind();
 
-		gl.uniformMatrix4fv(
-			gl.getUniformLocation(this.shader_program.prog, 'projection'),
-			false,
-			ortho);
+		this.shader_program.set_uniform_mat4('projection', projection);
+		this.shader_program.set_uniform_mat4('model', model);
 
 		this.test_mesh.draw(this.shader_program);
 	}

@@ -1,14 +1,15 @@
-attribute vec3 vtx_pos;
-attribute vec3 tex_coords;
+attribute vec2 vtx_pos;
+attribute vec2 tex_pos;
 attribute vec4 rgba;
 
-varying highp vec3 out_tex_coords;
-varying highp vec4 out_rgba;
-
+uniform mat4 model;
 uniform mat4 projection;
 
-void main(void) {
-	gl_Position = projection * vec4(vtx_pos.xyz, 0.0);
-	out_tex_coords = tex_coords;
-	out_rgba = rgba;
+varying highp vec2 vtx_tex;
+varying highp vec4 vtx_rgba;
+
+void main() {
+	vtx_tex = tex_pos;
+	vtx_rgba = rgba;
+	gl_Position = projection * model * vec4(vtx_pos.xy, 1.0, 1.0);
 }

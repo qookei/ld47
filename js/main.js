@@ -1,21 +1,22 @@
-import { Game } from './game.js'
+import { set_gl } from "./opengl.js";
+import { Game } from "./game.js";
 
-let spector = new SPECTOR.Spector();
-spector.spyCanvases();
-spector.displayUI();
+main();
 
-function main() {
+async function main() {
 	const canvas = document.querySelector("#canvas");
-	//const gl = WebGLDebugUtils.makeDebugContext(canvas.getContext("webgl2"));
-	const gl = canvas.getContext("webgl");
+	const gl = WebGLDebugUtils.makeDebugContext(canvas.getContext("webgl2"));
+	//const gl = canvas.getContext("webgl2");
 
-	if (gl === null) {
-		alert("Your browser may not support WebGL");
+	if (!gl) {
+		alert("Failed to create a WebGL context. Perhaps try a more up to date browser?");
 		return;
 	}
 
-	let game = new Game(gl);
+	set_gl(gl);
+
+	const game = new Game();
+	await game.init();
+
 	game.run();
 }
-
-window.onload = main;
