@@ -11,5 +11,5 @@ varying highp vec4 vtx_rgba;
 void main() {
 	vtx_tex = tex_pos;
 	vtx_rgba = rgba;
-	gl_Position = projection * model * vec4(vtx_pos.xy, 1.0, 1.0);
+	gl_Position = projection * model * vec4(vtx_pos.xy, 0.0, 1.0);
 }

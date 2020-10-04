@@ -174,7 +174,7 @@ export class VertexObject {
 	}
 }
 
-const projection_ = mat4.ortho(mat4.create(), 0, 1280, 720, 0, 0.1, 100);
+const projection_ = mat4.ortho(mat4.create(), 0, 1280, 720, 0, 0, 1);
 
 const sprite_program_ = new ShaderProgram();
 
@@ -199,9 +199,6 @@ export function prepare_frame(cc = [0, 0, 0, 1]) {
 export class Sprite {
 	constructor(w, h, texture, bo) {
 		this.model_matrix = mat4.create();
-
-		mat4.translate(this.model_matrix, this.model_matrix,
-			[0.0, 0.0, -2.0]); // TODO: why do we need the -2.0???
 
 		this.w = w;
 		this.h = h;
@@ -231,13 +228,12 @@ export class Sprite {
 
 	set_position(pos) {
 		mat4.translate(this.model_matrix, mat4.create(),
-			[pos[0] - this.w / 2, pos[1] - this.h / 2, -6.0]);
+			[pos[0] - this.w / 2, pos[1] - this.h / 2, 0.0]);
 	}
 
 	translate(pos) {
 		mat4.translate(this.model_matrix, this.model_matrix,
 			pos.concat([0]));
-
 	}
 
 	draw() {

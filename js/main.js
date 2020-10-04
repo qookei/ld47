@@ -7,7 +7,7 @@ window.onload = () => { main(); };
 async function main() {
 	const canvas = document.querySelector("#canvas");
 	//const gl = WebGLDebugUtils.makeDebugContext(canvas.getContext("webgl2"));
-	const gl = canvas.getContext("webgl2");
+	const gl = canvas.getContext("webgl2", { depth: false, premultipliedAlpha: false, desynchronized: true });
 
 	if (!gl) {
 		alert("Failed to create a WebGL context. Perhaps try a more up to date browser?");
